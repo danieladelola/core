@@ -1137,10 +1137,10 @@
                 </div>
 
                 <button type="submit" class="w-full btn btn-danger py-3 rounded-lg mt-4">
-                    Sell Crypto
-                </button>
-            </form>
-        </div>
+                    <label for="sell_cryptoSelect" class="form-label">Select Cryptocurrency</label>
+                    <div class="relative flex items-center bg-gray-50 rounded-lg border border-gray-300">
+                        <img id="sell_cryptoIcon" src="" class="w-6 h-6 ml-3" alt="Crypto Icon">
+                        <select id="sell_cryptoSelect" name="currency" class="w-full py-2 px-3 pl-12 bg-transparent text-gray-900 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none" required>
     </div>
 </div>
 
@@ -1226,6 +1226,9 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="mt-2">
+                        <span id="c2f_balance" class="text-xs text-gray-500"></span>
+                    </div>
                 </div>
 
                 <div>
@@ -1260,6 +1263,13 @@
     </div>
 @endif
 
+<script>
+window.userDepositBalances = {
+    @foreach($cryptos as $crypto)
+        "{{ $crypto->symbol }}": {{ $crypto->user_deposit_balance ?? 0 }},
+    @endforeach
+};
+</script>
 <script>
 // ================= TradingView Integration ==================
 
@@ -1594,7 +1604,11 @@ async function updateF2CCryptoFields() {
 }
 
 // Crypto to Fiat Modal event listeners
-document.getElementById('c2f_cryptoSelect').addEventListener('change', updateC2FCryptoFields);
+document.getElementById('c2f_cryptoSelect').addEventListener('change', function() {
+    const symbol = this.value;
+    const balance = window.userDepositBalances && window.userDepositBalances[symbol] ? window.userDepositBalances[symbol] : 0;
+    document.getElementById('c2f_balance').textContent = symbol ? `Balance: ${balance}` : '';
+});
 document.getElementById('c2f_cryptoAmount').addEventListener('input', updateC2FCryptoFields);
 
 async function updateC2FCryptoFields() {

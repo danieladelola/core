@@ -67,15 +67,38 @@ class CryptoDepositController extends Controller
             $notify[] = ['success', 'Successfully converted fiat to crypto!'];
             return back()->withNotify($notify);
         } elseif ($conversionType === 'crypto_to_fiat') {
-            $currency = strtoupper($request->currency);
-            $wallet = UserWallet::where('user_id', auth()->id())
-                               ->where('currency', $currency)
-                               ->first();
+ $currency = strtoupper($request->currency);
 
-            if (!$wallet || $wallet->balance < $request->crypto_amount) {
-                $notify[] = ['error', 'Insufficient crypto balance!'];
-                return back()->withNotify($notify);
-            }
+// Sum confirmed deposits for this user + currency
+$balance = CryptoDeposit::where('user_id', $user->id)
+    ->where('currency', $currency)
+    ->where('status', 1) // confirmed/approved deposits
+    ->sum('amount');
+
+// Check if balance is enough
+if ($balance < (float)$request->crypto_amount) {
+    $notify[] = ['error', 'Insufficient crypto balance!'];
+    return back()->withNotify($notify);
+}
+
+// Deduct the amount (create a negative record or update deposits depending on your logic)
+CryptoDeposit::create([
+    'user_id' => $user->id,
+    'currency' => $currency,
+    'amount' => -(float)$request->crypto_amount, // store as deduction
+    'status' => 1,
+    'type' => 'debit',
+    'reference' => strtoupper(Str::random(12)),
+    'proof' => 'Conversion',
+]);
+
+// Credit fiat balance
+$user->balance += (float)$request->fiat_amount;
+$user->save();
+
+$notify[] = ['success', 'Successfully converted crypto to fiat!'];
+return back()->withNotify($notify);
+
 
             $wallet->balance -= $request->crypto_amount;
             $wallet->save();
